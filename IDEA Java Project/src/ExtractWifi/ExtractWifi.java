@@ -22,7 +22,7 @@ public class ExtractWifi {
         int wifi_signal;
         String wifiListsInfo;
         ResultSet ret1,ret2;
-        //int idCount = 1;
+        int idCount = 1;
 
         String sql1 = String.format("select * from %s",sourceTableName);
         dbConnect1.deliverSql(sql1,true);
@@ -30,7 +30,10 @@ public class ExtractWifi {
         if(ret1==null){
             System.exit(0);
         }
+        int x = 1;
         while(ret1.next()){
+            System.out.println("分析了"+x+"行");
+            x++;
             shop_id = ret1.getString(3);//店铺名
             wifiListsInfo = ret1.getString(7);//wifi原生字符串
             String wifiLists[] = wifiListsInfo.split(";");//存储逗号分隔的wifi列表
@@ -44,17 +47,20 @@ public class ExtractWifi {
                 ret2 = dbConnect2.getResultSet();
                 if (ret2.next()) {
                     wifi_signal = (wifi_signal + ret2.getInt(4)) / 2;
-                    sql2 = "update " + targetTableName + " set wifi_signal=" + wifi_signal + " where wifi_id = '" + wifi_id + "' and " +
+                    sql2 = "update " + targetTableName + " set dbm = " + wifi_signal + " where wifi_id = '" + wifi_id + "' and " +
                             "shop_id = '" + shop_id + "'";
                     dbConnect2.deliverSql(sql2, false);
                     dbConnect2.pst.executeUpdate();//更新数据
                 } else {
-                    sql2 = "insert into " + targetTableName + "(wifi_id,shop_id,signal) values(?,?,?)";
+                    sql2 = "insert into " + targetTableName + " values(?,?,?,?)";
                     dbConnect2.deliverSql(sql2, false);
-                    dbConnect2.pst.setString(1, wifi_id);
-                    dbConnect2.pst.setString(2, shop_id);
-                    dbConnect2.pst.setInt(3, wifi_signal);
+                    dbConnect2.pst.setInt(1,idCount++);
+                    dbConnect2.pst.setString(2, wifi_id);
+                    dbConnect2.pst.setString(3, shop_id);
+                    dbConnect2.pst.setInt(4, wifi_signal);
+                    dbConnect2.pst.executeUpdate();//更新数据
                 }
+                //System.out.println("更新了数据");
                 ret2.close();
             }
         }
