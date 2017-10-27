@@ -1,9 +1,6 @@
 package MySQLAssist;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 
 /**
  * Created on 2017-10-26.
@@ -17,7 +14,7 @@ public class DBConnect {
 
 
     private Connection connection = null;
-    private PreparedStatement pst = null;
+    public PreparedStatement pst = null;
 
     public DBConnect(){
         try{
@@ -28,7 +25,28 @@ public class DBConnect {
         }
     }
     //传入sql语句,递交执行
-
+    /**
+     * @param fetchMode : if is true, setFetchSize(Integer.MIN_VALUE)
+     */
+    public void deliverSql(String sql,boolean fetchMode){
+        try {
+            pst = connection.prepareStatement(sql);
+            if(fetchMode)
+                pst.setFetchSize(Integer.MIN_VALUE);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    //获得查询之后的结果集
+    public ResultSet getResultSet(){
+        if(pst!=null)
+            try {
+                return pst.executeQuery();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        return null;
+    }
     //关闭数据库
     public void dbClose(){
         try{
