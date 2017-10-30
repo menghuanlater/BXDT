@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * Created on 2017-10-30.
- * MTPSA:多线程模式的简单算法处理模式(优化过滤)dbm数据小于等于-90全部消除
+ * MTPSA:多线程模式的简单算法处理模式
  */
 public class MTPSA {
     //最终结果写入的数据库名
@@ -155,9 +155,6 @@ public class MTPSA {
                         //wifi的名字以及当前wifi的信号数值
                         String wifiName = wifi[0];
                         double wifiSignal = Double.valueOf(wifi[1]) + VALUE;
-                        //信号不符合要求直接忽略
-                        if(wifiSignal<=110)
-                            continue;
                         //查询wifi对应关联的店铺
                         sql = "select shop_id,AVG(dbm) from " + sourceTableName + " where wifi_id = '" + wifiName +"' " +
                                 "group by shop_id";
