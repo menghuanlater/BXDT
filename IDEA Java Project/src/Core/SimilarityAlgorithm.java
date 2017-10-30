@@ -42,37 +42,31 @@ public class SimilarityAlgorithm {
 
         String sql = "select * from " + targetTableName;
         dbConnect.deliverSql(sql,true);//连接test数据库,遍历读取每一条记录
-        ResultSet ret = dbConnect.pst.executeQuery();
-        //循环遍历ret结果集
-        //int x = 1;
-        while (ret.next()){
-            //if(x<298926){
-                //x++;
-               // row_id++;
-                //continue;
-            //}
-            String[] wifiLists = ret.getString(2).split(";");
-            head = new DictTree();//每分析一行重新建立一个字典树
-            for (String wifiList : wifiLists) {
-                String[] wifi = wifiList.split("\\|");
+            ResultSet ret = dbConnect.pst.executeQuery();
+            //循环遍历ret结果集
+            while (ret.next()){
+                String[] wifiLists = ret.getString(2).split(";");
+                head = new DictTree();//每分析一行重新建立一个字典树
+                for (String wifiList : wifiLists) {
+                    String[] wifi = wifiList.split("\\|");
 
-                //wifi的名字以及当前wifi的信号数值
-                String wifiName = wifi[0];
-                double wifiSignal = Double.valueOf(wifi[1]) + VALUE;
+                    //wifi的名字以及当前wifi的信号数值
+                    String wifiName = wifi[0];
+                    double wifiSignal = Double.valueOf(wifi[1]) + VALUE;
 
-                //查询wifi对应关联的店铺
-                sql = "select shop_id,AVG(dbm) from " + sourceTableName + " where wifi_id = '" + wifiName +"' " +
-                        "group by shop_id";
-                dbQuery.deliverSql(sql,false);
-                ResultSet retQuery = dbQuery.pst.executeQuery();
-                //遍历
-                while(retQuery.next())
-                    addOrInsertTree(retQuery.getString(1),
-                            (retQuery.getDouble(2)+wifiSignal)/2);
-                //用完关闭
-                retQuery.close();
-                dbQuery.pst.close();
-            }
+                    //查询wifi对应关联的店铺
+                    sql = "select shop_id,AVG(dbm) from " + sourceTableName + " where wifi_id = '" + wifiName +"' " +
+                            "group by shop_id";
+                    dbQuery.deliverSql(sql,false);
+                    ResultSet retQuery = dbQuery.pst.executeQuery();
+                    //遍历
+                    while(retQuery.next())
+                        addOrInsertTree(retQuery.getString(1),
+                                (retQuery.getDouble(2)+wifiSignal)/2);
+                    //用完关闭
+                    retQuery.close();
+                    dbQuery.pst.close();
+                }
             //数据分析查询完毕,接下来遍历字典树,取出有效节点
             List<DictTree> outComeSet = new ArrayList<>();
             travelDictTree(outComeSet,head);
