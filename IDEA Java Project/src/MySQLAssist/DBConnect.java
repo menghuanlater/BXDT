@@ -7,7 +7,7 @@ import java.sql.*;
  * MySQL数据库连接
  */
 public class DBConnect {
-    private static final String url = "jdbc:mysql://localhost:3306/bxdt?characterEncoding=utf-8&useSSL=true";
+    private static final String url = "jdbc:mysql://localhost:3306/bxdt?characterEncoding=utf-8&useSSL=true&rewriteBatchedStatements=true";
     private static final String name = "com.mysql.jdbc.Driver";
     private static final String user = "root";
     private static final String password = "root";
@@ -31,21 +31,13 @@ public class DBConnect {
     public void deliverSql(String sql,boolean fetchMode){
         try {
             pst = connection.prepareStatement(sql);
-            if(fetchMode)
+            if(fetchMode) {
                 pst.setFetchSize(Integer.MIN_VALUE);
+                pst.setFetchDirection(ResultSet.FETCH_REVERSE);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-    //获得查询之后的结果集
-    public ResultSet getResultSet(){
-        if(pst!=null)
-            try {
-                return pst.executeQuery();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        return null;
     }
     //关闭数据库
     public void dbClose(){
