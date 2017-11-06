@@ -43,6 +43,11 @@ public class MTPSA {
         Multi multi7 = new Multi(360001,420000);
         Multi multi8 = new Multi(420001,484000);
 
+        /*Multi multi1 = new Multi(1,120000);
+        Multi multi2 = new Multi(120001,240000);
+        Multi multi3 = new Multi(240001,360000);
+        Multi multi4 = new Multi(360001,484000);*/
+
         multi1.start();
         multi2.start();
         multi3.start();
@@ -59,6 +64,10 @@ public class MTPSA {
                 multi7.getState() != Thread.State.TERMINATED || multi8.getState() != Thread.State.TERMINATED){
             Thread.sleep(60000);
         }
+        /*while(multi1.getState() != Thread.State.TERMINATED || multi2.getState()!= Thread.State.TERMINATED
+                || multi3.getState() != Thread.State.TERMINATED || multi4.getState() != Thread.State.TERMINATED){
+            Thread.sleep(60000);
+        }*/
         //最后一波批量数据插入数据库
         writeDB.pst.executeBatch();
         writeDB.dbClose();
@@ -84,7 +93,8 @@ public class MTPSA {
         if(isNewData)
             obj.setShop_id(shop_id);
         obj.addCount();
-        obj.setSignal((obj.getSignal()+signal)/2);
+        if(signal>obj.getSignal())
+            obj.setSignal(signal);
     }
     //遍历字典树
     private static void travelDictTree(List<DictTree>outComeSet,DictTree target){
@@ -112,11 +122,11 @@ public class MTPSA {
         if(batchNum%10000 == 0){
             writeDB.pst.executeBatch();
         }
-        System.out.println("batchNum:"+batchNum);
         writeDB.pst.setInt(1,row_id);
         writeDB.pst.setString(2,shop_id);
         writeDB.pst.addBatch();
         batchNum++;
+        System.out.println(batchNum);
     }
 
     //专属私有类,多线程
@@ -155,15 +165,19 @@ public class MTPSA {
                         //wifi的名字以及当前wifi的信号数值
                         String wifiName = wifi[0];
                         double wifiSignal = Double.valueOf(wifi[1]) + VALUE;
+                        if(wifiSignal <= 120) //低于-80dm的忽略
+                            continue;
                         //查询wifi对应关联的店铺
                         sql = "select shop_id,AVG(dbm) from " + sourceTableName + " where wifi_id = '" + wifiName +"' " +
                                 "group by shop_id";
                         dbQuery.deliverSql(sql,false);
                         ResultSet retQuery = dbQuery.pst.executeQuery();
                         //遍历
-                        while(retQuery.next())
-                            addOrInsertTree(retQuery.getString(1),
-                                    (retQuery.getDouble(2)+wifiSignal)/2,head);
+                        while(retQuery.next()) {
+                            if(Math.abs(wifiSignal-retQuery.getDouble(2))<=10)
+                                addOrInsertTree(retQuery.getString(1),
+                                    (retQuery.getDouble(2) + wifiSignal) / 2, head);
+                        }
                         //用完关闭
                         retQuery.close();
                         dbQuery.pst.close();
