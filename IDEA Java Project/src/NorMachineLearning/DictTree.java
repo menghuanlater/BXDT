@@ -1,8 +1,9 @@
-package Core;
+package NorMachineLearning;
 
 /**
  * Created on 2017-10-29.
  * 字典树
+ * 没有做修约的最基本版本-->准确度:0.6383
  */
 public class DictTree {
     //属性

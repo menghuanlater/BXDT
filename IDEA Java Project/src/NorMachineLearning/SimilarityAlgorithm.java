@@ -1,4 +1,4 @@
-package Core;
+package NorMachineLearning;
 
 import MySQLAssist.DBConnect;
 

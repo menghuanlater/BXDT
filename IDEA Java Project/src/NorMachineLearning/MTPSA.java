@@ -1,4 +1,4 @@
-package Core;
+package NorMachineLearning;
 
 import MySQLAssist.DBConnect;
 
@@ -140,9 +140,11 @@ public class MTPSA {
             //相关数据表名字
             String targetTableName = "test";
             String sourceTableName = "wifi";
+            String moveTableName   = "move_wifi";
             //数据库连接
             DBConnect dbConnect = new DBConnect();
             DBConnect dbQuery = new DBConnect();
+            DBConnect moveQuery = new DBConnect();
             String sql;
             sql = "select * from " + targetTableName + " where row_id >=" + rowDown + " and row_id <="+rowUp;
             dbConnect.deliverSql(sql,true);//连接test数据库,遍历读取每一条记录
@@ -164,12 +166,24 @@ public class MTPSA {
 
                         //wifi的名字以及当前wifi的信号数值
                         String wifiName = wifi[0];
+                        //检查wifiName是否在move_wifi数据表中
+                        String moveSql = "select * from "+moveTableName+" where wifi_id='"+wifiName+"'";
+                        moveQuery.deliverSql(moveSql,false);
+                        ResultSet tmp = moveQuery.pst.executeQuery();
+                        if(tmp.next()){
+                            moveQuery.pst.close();
+                            tmp.close();
+                            continue;
+                        }else {
+                            moveQuery.pst.close();
+                            tmp.close();
+                        }
+                        //不是移动wifi,继续分析
                         double wifiSignal = Double.valueOf(wifi[1]) + VALUE;
                         if(wifiSignal <= 120) //低于-80dm的忽略
                             continue;
                         //查询wifi对应关联的店铺
-                        sql = "select shop_id,AVG(dbm) from " + sourceTableName + " where wifi_id = '" + wifiName +"' " +
-                                "group by shop_id";
+                        sql = "select shop_id,dbm from " + sourceTableName + " where wifi_id = '" + wifiName +"' ";
                         dbQuery.deliverSql(sql,false);
                         ResultSet retQuery = dbQuery.pst.executeQuery();
                         //遍历
@@ -200,7 +214,7 @@ public class MTPSA {
             dbConnect.dbClose();
             dbQuery.dbClose();
         }
-        public Multi(int rowDown,int rowUp){
+        Multi(int rowDown,int rowUp){
             this.rowDown = rowDown;
             this.rowUp = rowUp;
         }
