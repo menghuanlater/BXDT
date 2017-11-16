@@ -15,9 +15,12 @@ public class MTPSA {
     //最终结果写入的数据库名
     private static String resultTable = "result";
     //每次执行程序清空数据表
-    private static String defaultSql = "truncate table "+resultTable;
+    private static String defaultSql = "truncate table " + resultTable;
     //信号加权
     private static final int VALUE = 200;
+    //wifi等级分界线
+    private static final int rank1 = 135; //2
+    private static final int rank2 = 165; //3
 
     private static String writeSql = "insert into "+resultTable+" values(?,?)";
 
@@ -75,9 +78,9 @@ public class MTPSA {
 
     //新数据加入字典树
     //signal信号应该是取平均后的数值
-    private static void addOrInsertTree(String shop_id,double signal,DictTree head){
+    private static void addOrInsertTree(String shop_id,double accuracy,NewDictTree head){
         String src = shop_id.substring(2);
-        DictTree obj = head;
+        NewDictTree obj = head;
         boolean isNewData = false;
         for(int i=0;i<src.length();i++){
             int num = src.charAt(i) - '0';
@@ -93,26 +96,24 @@ public class MTPSA {
         if(isNewData)
             obj.setShop_id(shop_id);
         obj.addCount();
-        if(signal>obj.getSignal())
-            obj.setSignal(signal);
+        obj.addAccuracy(accuracy);
     }
     //遍历字典树
-    private static void travelDictTree(List<DictTree>outComeSet,DictTree target){
+    private static void travelNewDictTree(List<NewDictTree>outComeSet,NewDictTree target){
         if(target.getShop_id()!=null)
             outComeSet.add(target);
-        for(int i=0;i<DictTree.LENGTH;i++){
+        for(int i=0;i<NewDictTree.LENGTH;i++){
             if(target.getFlagsAt(i))
-                travelDictTree(outComeSet,target.getNextLinkAt(i));
+                travelNewDictTree(outComeSet,target.getNextLinkAt(i));
         }
     }
     //找到最优解
-    private static DictTree findBestNode(List<DictTree>outComeSet){
+    private static NewDictTree findBestNode(List<NewDictTree>outComeSet,int sumWifi){
         if(outComeSet.size()==0)
             return null;
-        DictTree best = outComeSet.get(0);
+        NewDictTree best = outComeSet.get(0);
         for(int i=1;i<outComeSet.size();i++){
-            if(outComeSet.get(i).getCount()>best.getCount() || (outComeSet.get(i).getCount() == best.getCount() &&
-                    outComeSet.get(i).getSignal()>best.getSignal()))
+            if(outComeSet.get(i).getFinalAccuracy(sumWifi) > best.getFinalAccuracy(sumWifi))
                 best = outComeSet.get(i);
         }
         return best;
@@ -128,13 +129,30 @@ public class MTPSA {
         batchNum++;
         System.out.println(batchNum);
     }
-
+    /*检查即将预测的shop_id 是否在测试的mall_id中,不在的话此shop_id作废
+    synchronized private static boolean isMatchMallId(String mall_id,String shop_id){
+        boolean result = true;
+        String sql = "select mall_id from shop_info where shop_id ='"+shop_id+"'";
+        dbConnect.deliverSql(sql,false);
+        try {
+            ResultSet ret = dbConnect.pst.executeQuery();
+            if(ret.next()){
+                String tmp = ret.getString(1);
+                if(!tmp.equals(mall_id))
+                    result = false;
+            }
+            ret.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }*/
     //专属私有类,多线程
     private static class Multi extends Thread{
         private int rowUp;
         private int rowDown;
         //字典树头节点
-        private DictTree head = null;
+        private NewDictTree head = null;
         @Override
         public void run(){
             //相关数据表名字
@@ -146,7 +164,7 @@ public class MTPSA {
             DBConnect dbQuery = new DBConnect();
             DBConnect moveQuery = new DBConnect();
             String sql;
-            sql = "select * from " + targetTableName + " where row_id >=" + rowDown + " and row_id <="+rowUp;
+            sql = "select wifi_info,mall_id from " + targetTableName + " where row_id >=" + rowDown + " and row_id <="+rowUp;
             dbConnect.deliverSql(sql,true);//连接test数据库,遍历读取每一条记录
             ResultSet ret = null;
             try {
@@ -159,8 +177,10 @@ public class MTPSA {
             try {
                 assert ret != null;
                 while (ret.next()){
-                    String[] wifiLists = ret.getString(2).split(";");
-                    head = new DictTree();//每分析一行重新建立一个字典树
+                    int sumWifi = 0;//有效分析的wifi计数
+                    String[] wifiLists = ret.getString(1).split(";");
+                    //String mall_id = ret.getString(2);
+                    head = new NewDictTree();//每分析一行重新建立一个字典树
                     for (String wifiList : wifiLists) {
                         String[] wifi = wifiList.split("\\|");
 
@@ -182,25 +202,37 @@ public class MTPSA {
                         double wifiSignal = Double.valueOf(wifi[1]) + VALUE;
                         if(wifiSignal <= 120) //低于-80dm的忽略
                             continue;
+                        //wifi可用于分析,sum++;
+                        sumWifi++;
                         //查询wifi对应关联的店铺
                         sql = "select shop_id,dbm from " + sourceTableName + " where wifi_id = '" + wifiName +"' ";
                         dbQuery.deliverSql(sql,false);
                         ResultSet retQuery = dbQuery.pst.executeQuery();
                         //遍历
                         while(retQuery.next()) {
-                            if(Math.abs(wifiSignal-retQuery.getDouble(2))<=10)
+                            if(Math.abs(wifiSignal-retQuery.getDouble(2))<=12) {
+                                double accuracy;
+                                double retSignal = retQuery.getDouble(2);
+                                double rank = 1;
+                                double value = (wifiSignal+retSignal)/2;
+                                if(value>=rank1 && value<rank2)
+                                    rank = 2.0;
+                                else if(value>=rank2)
+                                    rank = 3.0;
+                                accuracy = rank*(1-(Math.abs(wifiSignal-retSignal)/wifiSignal));
                                 addOrInsertTree(retQuery.getString(1),
-                                    (retQuery.getDouble(2) + wifiSignal) / 2, head);
+                                        accuracy, head);
+                            }
                         }
                         //用完关闭
                         retQuery.close();
                         dbQuery.pst.close();
                     }
                     //数据分析查询完毕,接下来遍历字典树,取出有效节点
-                    List<DictTree> outComeSet = new ArrayList<>();
-                    travelDictTree(outComeSet,head);
+                    List<NewDictTree> outComeSet = new ArrayList<>();
+                    travelNewDictTree(outComeSet,head);
                     //找到最优
-                    DictTree best = findBestNode(outComeSet);
+                    NewDictTree best = findBestNode(outComeSet,sumWifi);
                     if(best==null)
                         writeToMySQL(row_id,"null");
                     else

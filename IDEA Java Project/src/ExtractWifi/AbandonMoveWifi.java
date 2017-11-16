@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 /**
  * Created on 2017-11-07.
  * 分析wifi热点,剔除所有可能的个人热点(移动热点)解决数据冲突
- * 如果采用经纬度判别法,误差不超过0.02
+ * 如果采用经纬度判别法,误差不超过0.1
  */
 public class AbandonMoveWifi {
 
@@ -56,7 +56,7 @@ public class AbandonMoveWifi {
                     minLatitude = latitude;
             }
 
-            if(maxLongitude-minLongitude >= 0.02 || maxLatitude-minLatitude>=0.02){
+            if(maxLongitude-minLongitude >= 0.1 || maxLatitude-minLatitude>=0.1){
                 writeDB.pst.setString(1,wifi_id);
                 writeDB.pst.addBatch();
                 count++;
