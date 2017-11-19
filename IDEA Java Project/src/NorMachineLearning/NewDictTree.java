@@ -10,7 +10,7 @@ import java.util.List;
  */
 public class NewDictTree {
     //属性
-    static final int LENGTH = 10;
+    public static final int LENGTH = 10;
     private String shop_id;//节点保存的属性值
     private int count;//计数器,关联次数
     private NewDictTree[] nextLink = new NewDictTree[LENGTH];//链结点
@@ -30,7 +30,6 @@ public class NewDictTree {
         this.count++;
     }
     //获得权值
-    public int getCount(){return this.count;}
     public void setFlagsAt(int position,boolean status){
         flags[position] = status;
     }

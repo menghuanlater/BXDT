@@ -15,11 +15,13 @@ public class DBConnect {
 
     private Connection connection = null;
     public PreparedStatement pst = null;
+    public Statement stmt;
 
     public DBConnect(){
         try{
             Class.forName(name);
             connection = DriverManager.getConnection(url,user,password);
+            stmt = connection.createStatement();
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
         }

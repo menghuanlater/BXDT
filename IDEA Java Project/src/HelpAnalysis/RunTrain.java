@@ -1,6 +1,7 @@
-package NorMachineLearning;
+package HelpAnalysis;
 
 import MySQLAssist.DBConnect;
+import NorMachineLearning.NewDictTree;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,9 +12,9 @@ import java.util.List;
  * Created on 2017-10-30.
  * MTPSA:多线程模式的简单算法处理模式
  */
-public class MTPSA {
+public class RunTrain {
     //最终结果写入的数据库名
-    private static String resultTable = "result";
+    private static String resultTable = "result_train";
     //每次执行程序清空数据表
     private static String defaultSql = "truncate table " + resultTable;
     //信号加权
@@ -41,7 +42,7 @@ public class MTPSA {
         Multi multi5 = new Multi(240001,300000);
         Multi multi6 = new Multi(300001,360000);
         Multi multi7 = new Multi(360001,420000);
-        Multi multi8 = new Multi(420001,484000);
+        Multi multi8 = new Multi(420001,480000);
 
         /*Multi multi1 = new Multi(1,120000);
         Multi multi2 = new Multi(120001,240000);
@@ -153,8 +154,7 @@ public class MTPSA {
         @Override
         public void run(){
             //相关数据表名字
-            //String targetTableName = "test";
-            String targetTableName = "test";
+            String targetTableName = "user_info";
             String sourceTableName = "wifi";
             String moveTableName   = "move_wifi";
             //数据库连接
@@ -162,7 +162,7 @@ public class MTPSA {
             DBConnect dbQuery = new DBConnect();
             DBConnect moveQuery = new DBConnect();
             String sql;
-            sql = "select wifi_info from " + targetTableName + " where row_id >=" + rowDown + " and row_id <="+rowUp;
+            sql = "select wifi_info from " + targetTableName + " where i_id >=" + rowDown + " and i_id <="+rowUp;
             dbConnect.deliverSql(sql,true);//连接test数据库,遍历读取每一条记录
             ResultSet ret = null;
             try {
@@ -239,6 +239,7 @@ public class MTPSA {
             //关闭数据库
             dbConnect.dbClose();
             dbQuery.dbClose();
+            moveQuery.dbClose();
         }
         Multi(int rowDown,int rowUp){
             this.rowDown = rowDown;
